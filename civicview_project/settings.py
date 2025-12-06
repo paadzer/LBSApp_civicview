@@ -208,7 +208,14 @@ CELERY_RESULT_BACKEND = env(
 CONDA_PREFIX = os.environ.get("CONDA_PREFIX")
 DOCKER_ENV = os.environ.get("DOCKER_ENV", "false").lower() == "true"
 
-if DOCKER_ENV or os.path.exists("/.dockerenv"):
+# Better Docker detection: check multiple indicators
+IS_DOCKER = (
+    DOCKER_ENV or 
+    os.path.exists("/.dockerenv") or 
+    os.path.exists("/proc/self/cgroup") and any("docker" in line for line in open("/proc/self/cgroup", "r") if os.path.exists("/proc/self/cgroup"))
+)
+
+if IS_DOCKER:
     # Docker/Linux environment: Use system libraries (set via environment or auto-detect)
     GDAL_LIBRARY_PATH = os.environ.get("GDAL_LIBRARY_PATH", "/usr/lib/x86_64-linux-gnu/libgdal.so")
     GEOS_LIBRARY_PATH = os.environ.get("GEOS_LIBRARY_PATH", "/usr/lib/x86_64-linux-gnu/libgeos_c.so")
