@@ -4,7 +4,7 @@ import axios from "axios";
 // Create Axios instance with base URL for all API requests
 // Points to Django REST Framework API endpoint
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: "https://lbsappcivicview-production.up.railway.app/api/",
 });
 
 // Fetch all reports from the API
