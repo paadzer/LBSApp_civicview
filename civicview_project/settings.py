@@ -30,6 +30,12 @@ DEBUG = env.bool("DEBUG", default=True)
 # Prevents HTTP Host header attacks
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 
+# Automatically add Railway domain in production
+if not DEBUG:
+    railway_domain = "lbsappcivicview-production.up.railway.app"
+    if railway_domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(railway_domain)
+
 # ------------------------------------------------------------
 # Installed Apps
 # ------------------------------------------------------------
@@ -174,6 +180,20 @@ CORS_ALLOWED_ORIGINS = env.list(
     ],
 )
 
+# Additional CORS settings for better mobile support
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
 # ------------------------------------------------------------
 # Celery / Redis
 # ------------------------------------------------------------
@@ -208,12 +228,16 @@ CELERY_RESULT_BACKEND = env(
 CONDA_PREFIX = os.environ.get("CONDA_PREFIX")
 DOCKER_ENV = os.environ.get("DOCKER_ENV", "false").lower() == "true"
 
-# Better Docker detection: check multiple indicators
-IS_DOCKER = (
-    DOCKER_ENV or 
-    os.path.exists("/.dockerenv") or 
-    os.path.exists("/proc/self/cgroup") and any("docker" in line for line in open("/proc/self/cgroup", "r") if os.path.exists("/proc/self/cgroup"))
-)
+# Better Docker detection: check multiple indicators (safer file reading)
+IS_DOCKER = DOCKER_ENV or os.path.exists("/.dockerenv")
+
+# Check cgroup file safely for Docker detection
+if not IS_DOCKER and os.path.exists("/proc/self/cgroup"):
+    try:
+        with open("/proc/self/cgroup", "r") as f:
+            IS_DOCKER = any("docker" in line for line in f)
+    except (IOError, OSError):
+        pass
 
 if IS_DOCKER:
     # Docker/Linux environment: Use system libraries (set via environment or auto-detect)
