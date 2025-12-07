@@ -1,37 +1,51 @@
 // Import React hooks for state management
 import { useState } from "react";
 // Import API authentication functions
-import { login } from "../api";
+import { register } from "../api";
 
-// Login component: Handles user authentication
+// Register component: Handles user registration
 // Props:
-//   - onLoginSuccess: Callback function called when login is successful
-//   - onSwitchToRegister: Callback to switch to registration screen
-function Login({ onLoginSuccess, onSwitchToRegister }) {
+//   - onRegisterSuccess: Callback function called when registration is successful
+//   - onSwitchToLogin: Callback to switch back to login screen
+function Register({ onRegisterSuccess, onSwitchToLogin }) {
   // State for form field values
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   // State for error message
   const [error, setError] = useState(null);
-  // State for loading (during login request)
+  // State for loading (during registration request)
   const [loading, setLoading] = useState(false);
 
   // Handler for form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+
+    // Validation
+    if (password !== passwordConfirm) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Attempt to login with provided credentials
-      await login(username, password);
+      // Attempt to register with provided credentials
+      await register(username, email, password, passwordConfirm);
       // Call success callback to update parent component
-      onLoginSuccess();
+      onRegisterSuccess();
     } catch (err) {
-      // Display error message if login fails
+      // Display error message if registration fails
       setError(
         err.response?.data?.error ||
-        "Invalid username or password. Please try again."
+        "Error creating account. Please try again."
       );
     } finally {
       setLoading(false);
@@ -43,7 +57,7 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
       <div className="login-card">
         <div className="login-header">
           <h1>Civic View</h1>
-          <p>Sign in to report civic issues</p>
+          <p>Create a new account</p>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -57,7 +71,18 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
               onChange={(e) => setUsername(e.target.value)}
               required
               autoFocus
-              placeholder="Enter your username"
+              placeholder="Choose a username"
+              minLength={3}
+            />
+          </label>
+
+          <label>
+            Email (optional)
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.email@example.com"
             />
           </label>
 
@@ -68,21 +93,34 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="Enter your password"
+              placeholder="At least 8 characters"
+              minLength={8}
+            />
+          </label>
+
+          <label>
+            Confirm Password
+            <input
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              required
+              placeholder="Re-enter your password"
+              minLength={8}
             />
           </label>
 
           <button type="submit" disabled={loading} className="login-button">
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
         <div className="login-footer">
           <p>
-            Don't have an account?{" "}
+            Already have an account?{" "}
             <button
               type="button"
-              onClick={onSwitchToRegister}
+              onClick={onSwitchToLogin}
               style={{
                 background: "none",
                 border: "none",
@@ -93,7 +131,7 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
                 fontSize: "0.875rem",
               }}
             >
-              Create one here
+              Sign in here
             </button>
           </p>
         </div>
@@ -102,4 +140,4 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
   );
 }
 
-export default Login;
+export default Register;

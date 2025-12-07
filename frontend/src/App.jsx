@@ -6,11 +6,14 @@ import { createReport, fetchHotspots, fetchReports, isAuthenticated, getCurrentU
 import MapView from "./components/MapView";
 import ReportForm from "./components/ReportForm";
 import Login from "./components/Login";
+import Register from "./components/Register";
 
 // Main App component: Root component of the React application
 function App() {
   // State for authentication
   const [authenticated, setAuthenticated] = useState(false);
+  // State for showing login or register screen
+  const [showRegister, setShowRegister] = useState(false);
   // State for storing all civic reports from the API
   const [reports, setReports] = useState([]);
   // State for storing all hotspot clusters from the API
@@ -60,8 +63,8 @@ function App() {
     }
   }, [authenticated]);
 
-  // Handler for successful login
-  const handleLoginSuccess = () => {
+  // Handler for successful login/registration
+  const handleAuthSuccess = () => {
     setAuthenticated(true);
     setUser(getCurrentUser());
   };
@@ -96,9 +99,22 @@ function App() {
     setSelectedLocation({ lat, lng });
   };
 
-  // Show login screen if not authenticated
+  // Show login/register screen if not authenticated
   if (!authenticated) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    if (showRegister) {
+      return (
+        <Register
+          onRegisterSuccess={handleAuthSuccess}
+          onSwitchToLogin={() => setShowRegister(false)}
+        />
+      );
+    }
+    return (
+      <Login
+        onLoginSuccess={handleAuthSuccess}
+        onSwitchToRegister={() => setShowRegister(true)}
+      />
+    );
   }
 
   // Show main application if authenticated

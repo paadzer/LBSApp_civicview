@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 
 from .models import Hotspot, Report
 from .serializers import HotspotSerializer, ReportSerializer
@@ -88,6 +89,86 @@ def login(request):
         return Response(
             {"error": "Invalid username or password"},
             status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+
+# Register endpoint: Creates a new user account
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register(request):
+    """
+    POST /api/register/
+    Request body:
+    {
+        "username": "new_user",
+        "email": "user@example.com",
+        "password": "secure_password",
+        "password_confirm": "secure_password"
+    }
+    
+    Returns:
+    {
+        "message": "User created successfully",
+        "user": {
+            "id": 1,
+            "username": "new_user",
+            "email": "user@example.com"
+        }
+    }
+    """
+    username = request.data.get("username")
+    email = request.data.get("email", "")
+    password = request.data.get("password")
+    password_confirm = request.data.get("password_confirm")
+
+    # Validation
+    if not username or not password:
+        return Response(
+            {"error": "Username and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if password != password_confirm:
+        return Response(
+            {"error": "Passwords do not match"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(password) < 8:
+        return Response(
+            {"error": "Password must be at least 8 characters long"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Check if username already exists
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {"error": "Username already exists"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Create user
+    try:
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+        # Create token for the new user
+        token = Token.objects.create(user=user)
+        return Response({
+            "message": "User created successfully",
+            "token": token.key,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email or "",
+            }
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response(
+            {"error": f"Error creating user: {str(e)}"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
 

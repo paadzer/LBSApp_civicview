@@ -28,6 +28,21 @@ api.interceptors.response.use(
 );
 
 // Authentication functions
+export const register = async (username, email, password, passwordConfirm) => {
+  const response = await api.post("register/", { 
+    username, 
+    email, 
+    password, 
+    password_confirm: passwordConfirm 
+  });
+  // Store token and user info (auto-login after registration)
+  localStorage.setItem("authToken", response.data.token);
+  localStorage.setItem("user", JSON.stringify(response.data.user));
+  // Set authorization header for future requests
+  api.defaults.headers.common["Authorization"] = `Token ${response.data.token}`;
+  return response.data;
+};
+
 export const login = async (username, password) => {
   const response = await api.post("login/", { username, password });
   // Store token and user info
