@@ -73,5 +73,5 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Use gunicorn as WSGI server
-CMD ["gunicorn", "civicview_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+# Use a startup script that runs migrations, collectstatic, then gunicorn
+CMD sh -c "python manage.py migrate && python manage.py collectstatic --noinput || true && gunicorn civicview_project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3 --timeout 120"
