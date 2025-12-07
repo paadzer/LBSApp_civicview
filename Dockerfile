@@ -67,9 +67,6 @@ COPY . .
 # Create staticfiles directory and set permissions
 RUN mkdir -p /app/staticfiles && chown -R appuser:appuser /app
 
-# Collect static files (if needed) - run as root before switching users
-RUN python manage.py collectstatic --noinput || true
-
 # Switch to non-root user
 USER appuser
 
