@@ -5,8 +5,11 @@ import urllib.request
 
 # Import Django REST Framework viewsets and API views
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
 
 from .models import Hotspot, Report
 from .serializers import HotspotSerializer, ReportSerializer
@@ -19,6 +22,14 @@ class ReportViewSet(viewsets.ModelViewSet):
     queryset = Report.objects.all().order_by("-created_at")
     # Serializer class that converts between JSON and Report model instances
     serializer_class = ReportSerializer
+    # Require authentication for creating/updating/deleting reports
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        # Allow anyone to view reports, but require auth for modifications
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
 
 # HotspotViewSet: Provides read-only access to hotspot clusters
@@ -26,8 +37,95 @@ class ReportViewSet(viewsets.ModelViewSet):
 class HotspotViewSet(viewsets.ReadOnlyModelViewSet):
     # Query all hotspots, ordered by most recent first (descending by created_at)
     queryset = Hotspot.objects.all().order_by("-created_at")
-    # Serializer class that converts between JSON and Hotspot model instances
+    # Serializer class that converts between JSON and Report model instances
     serializer_class = HotspotSerializer
+
+
+# Login endpoint: Authenticates user and returns token
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login(request):
+    """
+    POST /api/login/
+    Request body:
+    {
+        "username": "your_username",
+        "password": "your_password"
+    }
+    
+    Returns:
+    {
+        "token": "auth_token_here",
+        "user": {
+            "id": 1,
+            "username": "your_username",
+            "email": "user@example.com"
+        }
+    }
+    """
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    if not username or not password:
+        return Response(
+            {"error": "Username and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        # Get or create token for user
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            "token": token.key,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email or "",
+            }
+        })
+    else:
+        return Response(
+            {"error": "Invalid username or password"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+
+# Logout endpoint: Deletes user's token
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """
+    POST /api/logout/
+    Requires authentication token in header: Authorization: Token <token>
+    
+    Returns success message
+    """
+    try:
+        request.user.auth_token.delete()
+        return Response({"message": "Successfully logged out"})
+    except Exception:
+        return Response(
+            {"error": "Error logging out"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+# Get current user info
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    """
+    GET /api/current-user/
+    Requires authentication token in header: Authorization: Token <token>
+    
+    Returns current user information
+    """
+    return Response({
+        "id": request.user.id,
+        "username": request.user.username,
+        "email": request.user.email or "",
+    })
 
 
 # POI (Points of Interest) API endpoint using Overpass API

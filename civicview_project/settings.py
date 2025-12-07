@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     # Third-party apps
     "corsheaders",  # Handles Cross-Origin Resource Sharing (CORS) for React frontend
     "rest_framework",  # Django REST Framework for building REST APIs
+    "rest_framework.authtoken",  # Token authentication for API
 
     # Your app: Main civic reporting application
     "civicview",
@@ -163,6 +164,15 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",  # JSON output for API
         "rest_framework.renderers.BrowsableAPIRenderer",  # HTML interface for testing
+    ],
+    # Authentication: Token-based authentication
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # Default permission: Require authentication (can be overridden per view)
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 

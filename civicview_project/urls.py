@@ -15,10 +15,26 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
+
+# Simple root view
+def root_view(request):
+    return JsonResponse({
+        "message": "Civic View API",
+        "endpoints": {
+            "api_root": "/api/",
+            "reports": "/api/reports/",
+            "hotspots": "/api/hotspots/",
+            "pois": "/api/pois/",
+            "admin": "/admin/"
+        }
+    })
 
 # Root URL configuration for the Django project
 urlpatterns = [
+    # Root URL - API information
+    path('', root_view, name='root'),
     # Django admin interface at /admin/
     path('admin/', admin.site.urls),
     # Include all API endpoints from civicview app at /api/
