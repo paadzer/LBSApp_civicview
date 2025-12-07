@@ -40,6 +40,8 @@ class HotspotViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Hotspot.objects.all().order_by("-created_at")
     # Serializer class that converts between JSON and Report model instances
     serializer_class = HotspotSerializer
+    # Allow anyone to view hotspots (no authentication required)
+    permission_classes = [AllowAny]
 
 
 # Login endpoint: Authenticates user and returns token

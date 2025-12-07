@@ -223,6 +223,21 @@ CELERY_RESULT_BACKEND = env(
     default=CELERY_BROKER_URL,  # Use same Redis instance for results
 )
 
+# Celery Beat configuration for periodic tasks
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "generate-hotspots-every-5-minutes": {
+        "task": "civicview.tasks.generate_hotspots",
+        "schedule": 300.0,  # Run every 300 seconds (5 minutes)
+        # Alternative: Use crontab for more control
+        # "schedule": crontab(minute="*/5"),  # Every 5 minutes
+    },
+}
+
+# Timezone for Celery Beat (optional, but recommended)
+CELERY_TIMEZONE = "UTC"
+
 # ------------------------------------------------------------
 # GeoDjango: GDAL + GEOS (Windows + Conda)
 # ------------------------------------------------------------
