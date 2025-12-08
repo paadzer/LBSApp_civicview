@@ -9,6 +9,101 @@ Civic View is a GeoDjango-powered civic issue reporting platform that exposes a 
 - **Data layer**: PostgreSQL + PostGIS
 - **Processing layer**: Celery + Redis + DBSCAN (scikit-learn)
 
+## 🌐 Live Application & Hosting
+
+### Application URLs
+
+- **Frontend (PWA):** [https://lbs-app-civicview.vercel.app/](https://lbs-app-civicview.vercel.app/)
+- **Backend API:** [https://lbsappcivicview-production.up.railway.app/api/](https://lbsappcivicview-production.up.railway.app/api/)
+- **API Root:** [https://lbsappcivicview-production.up.railway.app/](https://lbsappcivicview-production.up.railway.app/)
+
+### Hosting Infrastructure
+
+The application is deployed across multiple cloud services:
+
+#### Frontend (Vercel)
+- **Platform:** Vercel
+- **Type:** Progressive Web Application (PWA)
+- **Features:**
+  - Automatic deployments from GitHub
+  - Global CDN for fast loading
+  - Service worker for offline capabilities
+  - Responsive design for mobile and desktop
+
+#### Backend (Railway)
+- **Platform:** Railway
+- **Deployment:** Docker containers
+- **Services:**
+  - **Web Service:** Django REST API (Gunicorn)
+  - **Worker Service:** Celery Worker for async task processing
+  - **Beat Service:** Celery Beat scheduler for periodic tasks
+  - **Database:** PostgreSQL with PostGIS extension
+  - **Message Broker:** Redis for Celery task queue
+
+### Automatic Hotspot Generation
+
+The application features **fully automated hotspot generation** that runs continuously:
+
+#### How It Works
+
+1. **Celery Beat Scheduler** runs continuously on Railway
+   - Schedules the `generate_hotspots` task every **5 minutes**
+   - Configuration: `CELERY_BEAT_SCHEDULE` in `civicview_project/settings.py`
+   - Task: `civicview.tasks.generate_hotspots`
+
+2. **Celery Worker** processes scheduled tasks
+   - Receives tasks from the Redis message broker
+   - Executes DBSCAN clustering algorithm on all reports
+   - Generates hotspot polygons and stores them in the database
+
+3. **Automatic Updates**
+   - Hotspots are regenerated every 5 minutes
+   - Old hotspots are deleted and new ones created based on current reports
+   - No manual intervention required
+   - System runs 24/7 in the cloud
+
+#### Benefits
+
+- **Real-time Insights:** Hotspots always reflect the latest report data
+- **Zero Maintenance:** Fully automated, no manual triggers needed
+- **Scalable:** Handles any number of reports efficiently
+- **Reliable:** Runs continuously with automatic error recovery
+
+#### Monitoring
+
+You can monitor the automatic generation by:
+- Checking **Beat service logs** in Railway for scheduling messages
+- Checking **Worker service logs** for task execution
+- Viewing hotspots on the frontend map (orange polygons)
+- Querying the `/api/hotspots/` endpoint
+
+### Deployment Architecture
+
+```
+┌─────────────────┐
+│   Vercel CDN    │  ← Frontend (React PWA)
+│  (Frontend)     │
+└────────┬────────┘
+         │ HTTPS
+         ▼
+┌─────────────────────────────────────────┐
+│         Railway Platform                │
+│  ┌──────────────┐  ┌──────────────┐   │
+│  │ Django API   │  │ Celery Worker │   │
+│  │ (Gunicorn)   │  │              │   │
+│  └──────┬───────┘  └──────┬───────┘   │
+│         │                  │            │
+│  ┌──────▼──────────────────▼──────┐   │
+│  │      Redis (Message Broker)     │   │
+│  └──────┬──────────────────┬──────┘   │
+│         │                  │            │
+│  ┌──────▼──────┐  ┌────────▼──────┐   │
+│  │ PostgreSQL  │  │ Celery Beat   │   │
+│  │  (PostGIS)  │  │  (Scheduler)  │   │
+│  └─────────────┘  └───────────────┘   │
+└─────────────────────────────────────────┘
+```
+
 ## Prerequisites
 
 - **Conda** (or Mamba/Micromamba) - Required for managing Python environment and GeoDjango dependencies
@@ -337,13 +432,69 @@ Returns a list of all reports, ordered by most recent first.
 
 Returns a list of all detected hotspot clusters as polygons.
 
+## What the App Does
+
+Civic View is a location-based services (LBS) application that enables citizens to report civic issues and automatically identifies problem hotspots using machine learning clustering.
+
+### Core Features
+
+1. **Civic Issue Reporting**
+   - Users can create accounts and log in
+   - Submit reports with title, description, category, and location
+   - Location can be set by clicking on an interactive map
+   - Reports are stored with geographic coordinates (PostGIS PointField)
+
+2. **Automatic Hotspot Detection**
+   - Uses DBSCAN clustering algorithm to identify areas with multiple reports
+   - Automatically runs every 5 minutes via Celery Beat scheduler
+   - Generates polygon boundaries (convex hulls) for each cluster
+   - Visualized as orange polygons on the map
+
+3. **Interactive Map Interface**
+   - Leaflet-based map showing all reports (red markers)
+   - Hotspot clusters displayed as orange polygons
+   - Points of Interest (POIs) from OpenStreetMap
+   - Click-to-select location for new reports
+
+4. **Points of Interest Integration**
+   - Fetches nearby POIs from Overpass API (OpenStreetMap)
+   - Displays restaurants, cafes, shops, tourist attractions, etc.
+   - Helps users understand the context around reported issues
+
+5. **Progressive Web Application (PWA)**
+   - Works on mobile and desktop browsers
+   - Can be installed as an app on mobile devices
+   - Offline capabilities via service worker
+   - Responsive design for all screen sizes
+
+### User Workflow
+
+1. **Registration/Login:** Users create accounts or log in
+2. **View Map:** See existing reports and hotspots on the map
+3. **Submit Report:** Click on map to select location, fill form, submit
+4. **Automatic Processing:** System automatically generates hotspots every 5 minutes
+5. **View Results:** Hotspots appear as orange polygons showing problem areas
+
 ## Hotspot Generation
 
 Hotspots are generated using DBSCAN clustering algorithm to identify areas with multiple reports.
 
-### Generate Hotspots (Management Command)
+### Automatic Generation (Production)
 
-The simplest way to generate hotspots:
+**In the deployed application, hotspots are automatically generated every 5 minutes** via Celery Beat scheduler. No manual intervention is required.
+
+The automatic system:
+- Runs continuously on Railway
+- Schedules tasks every 5 minutes
+- Processes all reports in the database
+- Updates hotspot polygons automatically
+- Handles errors gracefully with retry logic
+
+### Manual Generation (Local Development)
+
+For local development, you can manually trigger hotspot generation:
+
+#### Management Command
 
 ```bash
 python manage.py generate_hotspots
@@ -357,9 +508,9 @@ This command:
 
 **Note:** This replaces all existing hotspots. Run this after adding new reports to update hotspot detection.
 
-### Generate Hotspots via Celery
+#### Via Celery (Async)
 
-If you want to use Celery for async processing:
+If you want to use Celery for async processing locally:
 
 1. Make sure Celery worker is running (see Step 10 in Setup)
 2. From Django shell or a view:
@@ -428,6 +579,55 @@ docker compose down
 ```
 
 **Note:** For local development with Conda, the Docker setup is optional. Use Docker if you prefer containerized development or for production deployment.
+
+## Cloud Deployment
+
+### Backend Deployment (Railway)
+
+The backend is deployed on Railway using Docker containers:
+
+1. **Connect GitHub Repository**
+   - Link your GitHub repository to Railway
+   - Railway automatically detects the Dockerfile
+
+2. **Add Services**
+   - **Web Service:** Main Django API
+   - **Worker Service:** Celery worker for task processing
+   - **Beat Service:** Celery Beat scheduler
+   - **PostgreSQL:** Database with PostGIS extension
+   - **Redis:** Message broker for Celery
+
+3. **Configure Environment Variables**
+   - Set all required environment variables in Railway dashboard
+   - Database credentials, Redis URLs, CORS settings, etc.
+
+4. **Deploy**
+   - Railway automatically deploys on git push
+   - Services start automatically with health checks
+
+### Frontend Deployment (Vercel)
+
+The frontend is deployed on Vercel as a PWA:
+
+1. **Connect GitHub Repository**
+   - Link the `frontend/` directory to Vercel
+   - Configure build settings:
+     - Build Command: `npm run build`
+     - Output Directory: `dist`
+
+2. **Environment Variables**
+   - Set `VITE_API_URL` to your Railway backend URL
+
+3. **Deploy**
+   - Vercel automatically deploys on git push
+   - Global CDN ensures fast loading worldwide
+
+### GitHub Repository
+
+The complete source code is available on GitHub:
+- Repository: [Link to your GitHub repository]
+- All code, configuration files, and documentation included
+- Ready for deployment to Railway and Vercel
 
 ## Verification & Testing
 
@@ -603,12 +803,76 @@ CivicView/
 - [ ] Tested report creation
 - [ ] Tested hotspot generation
 
+## Assignment Submission
+
+### Live Application Links
+
+- **Frontend URL:** [https://lbs-app-civicview.vercel.app/](https://lbs-app-civicview.vercel.app/)
+- **Backend API URL:** [https://lbsappcivicview-production.up.railway.app/api/](https://lbsappcivicview-production.up.railway.app/api/)
+
+### Submission Files
+
+1. **GitHub Repository:** Complete source code available at [GitHub Repository URL]
+   - All Python/Django backend code
+   - React frontend code
+   - Docker configuration
+   - Environment configuration examples
+   - Documentation
+
+2. **Deployment Files:**
+   - `Dockerfile` - Backend containerization
+   - `docker-compose.yml` - Local development setup
+   - `requirements.txt` - Python dependencies
+   - `frontend/package.json` - Frontend dependencies
+
+### Key Features Demonstrated
+
+✅ **Location-Based Services (LBS)**
+- Geographic data storage with PostGIS
+- Spatial queries and operations
+- Interactive map interface
+
+✅ **Django REST Framework API**
+- RESTful endpoints for reports and hotspots
+- Token-based authentication
+- User registration and login
+
+✅ **Progressive Web Application (PWA)**
+- Service worker for offline capabilities
+- Installable on mobile devices
+- Responsive design
+
+✅ **Automated Hotspot Detection**
+- DBSCAN clustering algorithm
+- Automatic generation every 5 minutes via Celery Beat
+- Real-time updates without manual intervention
+
+✅ **Cloud Deployment**
+- Backend on Railway (Docker containers)
+- Frontend on Vercel (CDN)
+- Managed PostgreSQL with PostGIS
+- Redis message broker
+
+✅ **External API Integration**
+- Overpass API for Points of Interest
+- OpenStreetMap data integration
+
 ## Next Steps
 
-Once everything is running:
-1. Create some test reports via the frontend or API
-2. Generate hotspots: `python manage.py generate_hotspots`
-3. Explore the Django admin interface
+### For Users
+
+1. Visit the live application: [https://lbs-app-civicview.vercel.app/](https://lbs-app-civicview.vercel.app/)
+2. Create an account or log in
+3. Explore existing reports and hotspots on the map
+4. Submit new reports by clicking on the map
+5. Watch hotspots automatically update every 5 minutes
+
+### For Developers
+
+1. Clone the repository from GitHub
+2. Follow the setup instructions in this README
+3. Run locally for development
 4. Customize DBSCAN parameters in `civicview/tasks.py` if needed
 5. Adjust map center/zoom in `frontend/src/components/MapView.jsx` for your region
+6. Deploy to your own Railway/Vercel accounts
 
