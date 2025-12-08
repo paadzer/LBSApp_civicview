@@ -36,3 +36,4 @@ You can generate these icons using:
 If icons are missing, the PWA will still work but may not pass all Lighthouse PWA checks. The manifest.json references these files, so they must exist for the PWA to be installable.
 
 
+
