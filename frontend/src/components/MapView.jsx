@@ -28,8 +28,8 @@ const selectedMarkerIcon = new L.Icon({
 // Different colored marker icons for different POI categories
 const poiMarkerIcons = {
   amenity: new L.Icon({
-    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
-    iconRetinaUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png",
+    iconRetinaUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png",
     iconSize: [25, 41],
     iconAnchor: [12, 41],
   }),
