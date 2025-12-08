@@ -325,9 +325,19 @@ function MapView({ reports, hotspots, selectedLocation, onMapClick }) {
               icon={poiMarkerIcon}
             >
               <Popup>
-                <strong>{poi.name}</strong>
-                <br />
-                <small>{poi.type}</small>
+                <strong style={{ fontSize: "1rem", display: "block", marginBottom: "0.25rem" }}>
+                  {poi.name}
+                </strong>
+                {poi.type && (
+                  <span style={{ 
+                    fontSize: "0.85rem", 
+                    color: "#6b7280",
+                    display: "block",
+                    fontStyle: "italic"
+                  }}>
+                    {poi.type}
+                  </span>
+                )}
               </Popup>
             </Marker>
           ))}

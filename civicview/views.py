@@ -300,27 +300,87 @@ def get_pois(request):
             for element in result["elements"]:
                 if element.get("type") == "node" and "lat" in element and "lon" in element:
                     tags = element.get("tags", {})
-                    # Extract name and type information
+                    
+                    # Extract name with more fallback options
                     name = (
                         tags.get("name")
                         or tags.get("name:en")
                         or tags.get("alt_name")
-                        or "Unnamed POI"
+                        or tags.get("operator")
+                        or tags.get("brand")
+                        or None
                     )
                     
-                    # Determine POI type from tags
-                    poi_type_str = "Unknown"
-                    for key in ["amenity", "tourism", "shop", "leisure", "healthcare"]:
-                        if key in tags:
-                            poi_type_str = f"{key}: {tags[key]}"
-                            break
-
-                    # Only include POIs with meaningful names or types
-                    if name != "Unnamed POI" or poi_type_str != "Unknown":
+                    # Better POI type formatting
+                    poi_type_str = None
+                    poi_category = None
+                    
+                    # Check common POI categories and format nicely
+                    if "amenity" in tags:
+                        poi_category = "amenity"
+                        amenity_type = tags["amenity"]
+                        # Format common amenities nicely
+                        type_mapping = {
+                            "restaurant": "Restaurant",
+                            "cafe": "Café",
+                            "pub": "Pub",
+                            "bar": "Bar",
+                            "fast_food": "Fast Food",
+                            "pharmacy": "Pharmacy",
+                            "hospital": "Hospital",
+                            "school": "School",
+                            "bank": "Bank",
+                            "fuel": "Gas Station",
+                            "parking": "Parking",
+                            "toilets": "Public Toilet",
+                        }
+                        poi_type_str = type_mapping.get(amenity_type, amenity_type.replace("_", " ").title())
+                    elif "tourism" in tags:
+                        poi_category = "tourism"
+                        tourism_type = tags["tourism"]
+                        type_mapping = {
+                            "artwork": "Artwork",
+                            "attraction": "Attraction",
+                            "museum": "Museum",
+                            "hotel": "Hotel",
+                            "hostel": "Hostel",
+                            "information": "Information",
+                            "viewpoint": "Viewpoint",
+                        }
+                        poi_type_str = type_mapping.get(tourism_type, tourism_type.replace("_", " ").title())
+                    elif "shop" in tags:
+                        poi_category = "shop"
+                        shop_type = tags["shop"]
+                        poi_type_str = shop_type.replace("_", " ").title() + " Shop"
+                    elif "leisure" in tags:
+                        poi_category = "leisure"
+                        leisure_type = tags["leisure"]
+                        type_mapping = {
+                            "park": "Park",
+                            "playground": "Playground",
+                            "sports_centre": "Sports Centre",
+                            "swimming_pool": "Swimming Pool",
+                        }
+                        poi_type_str = type_mapping.get(leisure_type, leisure_type.replace("_", " ").title())
+                    elif "healthcare" in tags:
+                        poi_category = "healthcare"
+                        healthcare_type = tags["healthcare"]
+                        poi_type_str = healthcare_type.replace("_", " ").title()
+                    else:
+                        # Fallback: use first meaningful tag
+                        for key in ["historic", "natural", "office", "craft"]:
+                            if key in tags:
+                                poi_type_str = tags[key].replace("_", " ").title()
+                                poi_category = key
+                                break
+                    
+                    # Only include POIs with meaningful information
+                    if name or poi_type_str:
                         pois.append(
                             {
-                                "name": name,
-                                "type": poi_type_str,
+                                "name": name or poi_type_str or "Point of Interest",
+                                "type": poi_type_str or "Unknown",
+                                "category": poi_category,
                                 "latitude": element["lat"],
                                 "longitude": element["lon"],
                             }
