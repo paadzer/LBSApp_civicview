@@ -229,7 +229,7 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     "generate-hotspots-every-5-minutes": {
         "task": "civicview.tasks.generate_hotspots",
-        "schedule": 300.0,  # Run every 300 seconds (5 minutes)
+        "schedule": 60.0,  # Run every 60 seconds (1 minute)
         # Alternative: Use crontab for more control
         # "schedule": crontab(minute="*/5"),  # Every 5 minutes
     },
